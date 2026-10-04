@@ -16,7 +16,15 @@ export default function App() {
       
       {/* 1. Header Component */}
       {currentTab !== 'exam' && (
-        <Header ... />
+        <Header
+  currentTab={currentTab}
+  onSelectTab={handleSelectTab}
+  activeSession={activeSession}
+  onResumeActiveTest={() => setCurrentTab('exam')}
+  onDiscardActiveTest={handleDiscardActiveTest}
+  candidateName={userProfile.name}
+  activeProfileSubTab={profileSubTab}
+/>
       )}
 
       {/* 2. AUTH STATUS BAR GOES HERE */}
