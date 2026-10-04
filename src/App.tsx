@@ -1,3 +1,45 @@
+// Imports at the top
+import Auth from './components/Auth'; 
+// ... other imports ...
+
+export default function App() {
+  // State variables (session, showAuthModal, currentTab, etc.)
+  const [session, setSession] = useState<any>(null);
+  const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
+  // ... other states ...
+
+  // useEffect hooks
+  // ...
+
+  return (
+    <div className="min-h-screen bg-slate-100 text-slate-900 font-sans flex flex-col selection:bg-blue-200">
+      
+      {/* 1. Header Component */}
+      {currentTab !== 'exam' && (
+        <Header ... />
+      )}
+
+      {/* 2. AUTH STATUS BAR GOES HERE */}
+      {currentTab !== 'exam' && (
+        <div className="bg-white border-b border-slate-200 px-4 py-2 sm:px-8 flex justify-between items-center text-sm">
+           {/* ... status bar code ... */}
+        </div>
+      )}
+
+      {/* 3. AUTH MODAL GOES HERE */}
+      {showAuthModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+           {/* ... modal code containing <Auth /> ... */}
+        </div>
+      )}
+
+      {/* 4. Main App Content */}
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        {/* ... dashboard, start-test, exam screens ... */}
+      </main>
+    </div>
+  );
+}
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
