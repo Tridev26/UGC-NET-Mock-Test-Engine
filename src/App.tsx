@@ -1,53 +1,3 @@
-// Imports at the top
-import Auth from './components/Auth'; 
-// ... other imports ...
-
-export default function App() {
-  // State variables (session, showAuthModal, currentTab, etc.)
-  const [session, setSession] = useState<any>(null);
-  const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
-  // ... other states ...
-
-  // useEffect hooks
-  // ...
-
-  return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 font-sans flex flex-col selection:bg-blue-200">
-      
-      {/* 1. Header Component */}
-      {currentTab !== 'exam' && (
-        <Header
-  currentTab={currentTab}
-  onSelectTab={handleSelectTab}
-  activeSession={activeSession}
-  onResumeActiveTest={() => setCurrentTab('exam')}
-  onDiscardActiveTest={handleDiscardActiveTest}
-  candidateName={userProfile.name}
-  activeProfileSubTab={profileSubTab}
-/>
-      )}
-
-      {/* 2. AUTH STATUS BAR GOES HERE */}
-      {currentTab !== 'exam' && (
-        <div className="bg-white border-b border-slate-200 px-4 py-2 sm:px-8 flex justify-between items-center text-sm">
-           {/* ... status bar code ... */}
-        </div>
-      )}
-
-      {/* 3. AUTH MODAL GOES HERE */}
-      {showAuthModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
-           {/* ... modal code containing <Auth /> ... */}
-        </div>
-      )}
-
-      {/* 4. Main App Content */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {/* ... dashboard, start-test, exam screens ... */}
-      </main>
-    </div>
-  );
-}
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -55,6 +5,7 @@ export default function App() {
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from './utils/supabaseClient'; 
+import Auth from './components/Auth';
 import { 
   loadQuestionBanks,
   saveQuestionBanks, 
@@ -91,19 +42,37 @@ import { ResultView } from './components/ResultView';
 import { ProfileView, ProfileSubTab } from './components/ProfileView';
 
 export default function App() {
+  // --- Original State ---
   const [currentTab, setCurrentTab] = useState<string>('dashboard');
   const [profileSubTab, setProfileSubTab] = useState<ProfileSubTab>('overview');
-  
   const [questionBanks, setQuestionBanks] = useState<QuestionBank[]>(() => loadQuestionBanks()); 
   const [testAttempts, setTestAttempts] = useState<TestAttempt[]>(() => loadTestAttempts());
   const [activeSession, setActiveSession] = useState<ActiveTestSession | null>(() => loadActiveTestSession());
   const [markingScheme, setMarkingScheme] = useState<MarkingSchemeConfig>(() => loadMarkingScheme());
   const [userProfile, setUserProfile] = useState<UserProfile>(() => loadUserProfile());
-
   const [selectedAttemptForReview, setSelectedAttemptForReview] = useState<TestAttempt | null>(null);
   const [targetBankIdForSetup, setTargetBankIdForSetup] = useState<string | undefined>(undefined);
   const [targetPaperModeForSetup, setTargetPaperModeForSetup] = useState<TestPaperMode>('paper1');
 
+  // --- Auth State ---
+  const [session, setSession] = useState<any>(null);
+  const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
+
+  // --- Auth Effect ---
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) setShowAuthModal(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // --- Original Effects ---
   useEffect(() => {
     const fetchLiveDatabase = async () => {
       try {
@@ -138,6 +107,7 @@ export default function App() {
     }
   }, []);
 
+  // --- Original Functions ---
   const handleStartTest = (
     paperMode: TestPaperMode = 'paper1',
     paper1BankId?: string,
@@ -319,6 +289,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 font-sans flex flex-col selection:bg-blue-200">
+      
       {currentTab !== 'exam' && (
         <Header
           currentTab={currentTab}
@@ -329,6 +300,64 @@ export default function App() {
           candidateName={userProfile.name}
           activeProfileSubTab={profileSubTab}
         />
+      )}
+
+      {/* --- AUTH STATUS BAR --- */}
+      {currentTab !== 'exam' && (
+        <div className="bg-white border-b border-slate-200 px-4 py-2 sm:px-8 flex justify-between items-center text-sm">
+          <div>
+            {session ? (
+              <span className="text-slate-600">
+                Account: <strong className="text-slate-900">{session.user.is_anonymous ? 'Guest (Anonymous)' : (session.user.user_metadata?.display_name || 'Registered User')}</strong>
+              </span>
+            ) : (
+              <span className="text-amber-700 font-medium">Not logged in — tests will only save locally</span>
+            )}
+          </div>
+          <div className="flex gap-2">
+            {session ? (
+              <>
+                {session.user.is_anonymous && (
+                  <button 
+                    onClick={() => setShowAuthModal(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded font-medium cursor-pointer"
+                  >
+                    Save / Upgrade Account
+                  </button>
+                )}
+                <button 
+                  onClick={() => supabase.auth.signOut()}
+                  className="border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs px-3 py-1.5 rounded font-medium cursor-pointer"
+                >
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <button 
+                onClick={() => setShowAuthModal(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded font-medium cursor-pointer"
+              >
+                Sign In / Register
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* --- AUTH MODAL --- */}
+      {showAuthModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 relative">
+            <button 
+              onClick={() => setShowAuthModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-lg font-bold cursor-pointer"
+            >
+              ✕
+            </button>
+            <h2 className="text-xl font-bold mb-4 text-slate-900">Account Access</h2>
+            <Auth />
+          </div>
+        </div>
       )}
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
