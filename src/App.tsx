@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { AuthGateway } from './components/AuthGateway';
 import { supabase } from './utils/supabaseClient'; 
 import { 
   loadQuestionBanks,
@@ -29,7 +30,8 @@ import {
   Question,
   UserProfile,
   TestPaperMode,
-  PAPER_MODE_DETAILS
+  PAPER_MODE_DETAILS,
+  User
 } from './types';
 import { generatePaperModeQuestions, evaluateTest } from './utils/testEngine';
 
@@ -41,6 +43,11 @@ import { ResultView } from './components/ResultView';
 import { ProfileView, ProfileSubTab } from './components/ProfileView';
 
 export default function App() {
+  // --- Auth State ---
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [authNotice, setAuthNotice] = useState<string | null>(null);
+
+  // --- App State ---
   const [currentTab, setCurrentTab] = useState<string>('dashboard');
   const [profileSubTab, setProfileSubTab] = useState<ProfileSubTab>('overview');
   
@@ -54,6 +61,7 @@ export default function App() {
   const [targetBankIdForSetup, setTargetBankIdForSetup] = useState<string | undefined>(undefined);
   const [targetPaperModeForSetup, setTargetPaperModeForSetup] = useState<TestPaperMode>('paper1');
 
+  // --- Effects ---
   useEffect(() => {
     const fetchLiveDatabase = async () => {
       try {
@@ -88,6 +96,7 @@ export default function App() {
     }
   }, []);
 
+  // --- Functions ---
   const handleStartTest = (
     paperMode: TestPaperMode = 'paper1',
     paper1BankId?: string,
@@ -267,8 +276,29 @@ export default function App() {
 
   const isProfileTabActive = currentTab === 'profile' || ['question-banks', 'history', 'analytics', 'admin'].includes(currentTab);
 
+  // --- Authentication Interceptor ---
+  const handleAuthentication = (user: User, migrationNotice?: string) => {
+    setCurrentUser(user);
+    if (migrationNotice) {
+      setAuthNotice(migrationNotice);
+      setTimeout(() => setAuthNotice(null), 6000); 
+    }
+  };
+
+  if (!currentUser) {
+    return <AuthGateway onAuthenticated={handleAuthentication} />;
+  }
+
+  // --- Main App Render ---
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 font-sans flex flex-col selection:bg-blue-200">
+      
+      {authNotice && (
+        <div className="bg-emerald-500 text-white px-4 py-2 text-center text-sm font-medium shadow-sm animate-fade-in">
+          {authNotice}
+        </div>
+      )}
+
       {currentTab !== 'exam' && (
         <Header
           currentTab={currentTab}
