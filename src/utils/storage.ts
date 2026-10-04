@@ -212,7 +212,83 @@ export function loadAuthUser(): AuthUser | null {
     return DEFAULT_AUTH_USER;
   }
 }
+// --- Authentication & User Storage Functions ---
 
+const USERS_KEY = 'mock_test_users';
+const CURRENT_USER_KEY = 'mock_test_current_user';
+
+export const loadAllUsers = (): any[] => {
+  try {
+    const data = localStorage.getItem(USERS_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+};
+
+export const saveUser = (user: any): void => {
+  const users = loadAllUsers();
+  const existingIndex = users.findIndex(u => u.id === user.id);
+  if (existingIndex >= 0) {
+    users[existingIndex] = user;
+  } else {
+    users.push(user);
+  }
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+};
+
+export const findUserByUsername = (username: string): any | undefined => {
+  const users = loadAllUsers();
+  return users.find(u => u.username.toLowerCase() === username.toLowerCase());
+};
+
+export const setCurrentUser = (user: any | null): void => {
+  if (user) {
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+  } else {
+    localStorage.removeItem(CURRENT_USER_KEY);
+  }
+};
+
+export const migrateGuestDataToUser = (userId: string, username: string) => {
+  try {
+    const banksData = localStorage.getItem('mock_test_question_banks');
+    const attemptsData = localStorage.getItem('mock_test_attempts');
+    
+    const banks = banksData ? JSON.parse(banksData) : [];
+    const attempts = attemptsData ? JSON.parse(attemptsData) : [];
+    
+    // Tag existing guest data with the new user's ID
+    let banksUpdated = 0;
+    let attemptsUpdated = 0;
+
+    const updatedBanks = banks.map((bank: any) => {
+      if (!bank.user_id) {
+        banksUpdated++;
+        return { ...bank, user_id: userId };
+      }
+      return bank;
+    });
+
+    const updatedAttempts = attempts.map((attempt: any) => {
+      if (!attempt.user_id) {
+        attemptsUpdated++;
+        return { ...attempt, user_id: userId };
+      }
+      return attempt;
+    });
+
+    if (banksUpdated > 0) localStorage.setItem('mock_test_question_banks', JSON.stringify(updatedBanks));
+    if (attemptsUpdated > 0) localStorage.setItem('mock_test_attempts', JSON.stringify(updatedAttempts));
+
+    return {
+      banksMigrated: banksUpdated,
+      attemptsMigrated: attemptsUpdated
+    };
+  } catch {
+    return { banksMigrated: 0, attemptsMigrated: 0 };
+  }
+};
 export function saveAuthUser(user: AuthUser | null): void {
   try {
     if (!user) {
